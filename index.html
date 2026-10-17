@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ESP32-C3 Web Compiler</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#edf2fb;
+  --card:#ffffff;
+  --ink:#1f2a44; --muted:#8aa0b8; --faint:#b8b6bf;
+  --primary:#2c65e3; --primary-deep:#1d4fc4;
+  --accent:#c85726; --accent-deep:#a5431c;
+  --green:#2f9e68; --red:#d9534f;
+  --sh-d:rgba(138,158,198,.5); --sh-l:rgba(255,255,255,.95);
+  --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,Helvetica,Arial,sans-serif;
+}
+html{font-size:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);padding-bottom:116px}
+/* ---------- header ---------- */
+header.top{position:sticky;top:0;z-index:30;background:var(--bg);
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  box-shadow:0 10px 22px var(--sh-d)}
+.logo{width:48px;height:48px;border-radius:18px;background:var(--primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -5px 0 rgba(0,0,0,.16),0 8px 18px rgba(44,101,227,.4)}
+.logo svg{width:25px;height:25px}
+header.top h1{font-size:1.02rem;margin:0;font-weight:800;letter-spacing:.2px}
+header.top p{margin:2px 0 0;font-size:.72rem;color:var(--muted)}
+.wrap{max-width:720px;margin:0 auto;padding:16px 14px 8px}
+/* ---------- soft card ---------- */
+.card{background:var(--card);border-radius:30px;padding:20px;margin:0 0 18px;
+  box-shadow:14px 14px 32px var(--sh-d),-10px -10px 24px rgba(255,255,255,.85),inset 2px 2px 5px rgba(255,255,255,.95)}
+.card>h3{margin:0 0 4px;font-size:.74rem;font-weight:800;letter-spacing:1.6px;
+  text-transform:uppercase;color:var(--muted)}
+.card .sub{margin:0 0 14px;font-size:.78rem;color:var(--faint);line-height:1.5}
+.inset{background:#eef3fc;border-radius:18px;
+  box-shadow:inset 7px 7px 16px rgba(138,158,198,.4),inset -7px -7px 16px rgba(255,255,255,.9)}
+/* ---------- chunky clay button ---------- */
+.cbtn{border:0;cursor:pointer;font-family:inherit;font-size:.93rem;font-weight:800;
+  color:#fff;background:var(--primary);border-radius:999px;padding:16px 12px;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.16),0 12px 26px rgba(44,101,227,.4);
+  transition:transform .08s,box-shadow .08s}
+.cbtn:active{transform:translateY(3px);
+  box-shadow:inset 0 5px 14px rgba(0,0,0,.25),0 4px 10px rgba(44,101,227,.3)}
+.cbtn:disabled{opacity:.5;cursor:default}
+.cbtn svg{width:20px;height:20px}
+.cbtn.blue{background:var(--card);color:var(--ink);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.9),inset 0 -5px 0 rgba(138,158,198,.28),0 10px 22px var(--sh-d)}
+.cbtn.blue:active{transform:translateY(3px);
+  box-shadow:inset 0 5px 14px rgba(138,158,198,.45)}
+.cbtn.pink{background:var(--accent);color:#fff;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.16),0 12px 26px rgba(200,87,38,.4)}
+.cbtn.pink:active{transform:translateY(3px);
+  box-shadow:inset 0 5px 14px rgba(0,0,0,.25),0 4px 10px rgba(200,87,38,.3)}
+.cbtn.tiny{width:auto;padding:11px 16px;border-radius:14px;font-size:.8rem}
+.cbtn.tiny svg{width:16px;height:16px}
+/* soft neutral button */
+.sbtn{border:0;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:700;
+  color:var(--ink);background:var(--card);border-radius:999px;padding:15px 12px;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.9),inset 0 -5px 0 rgba(138,158,198,.25),0 10px 22px var(--sh-d)}
+.sbtn:active{transform:translateY(2px);
+  box-shadow:inset 0 5px 14px rgba(138,158,198,.4)}
+.sbtn svg{width:20px;height:20px}
+/* ---------- minimal file row ---------- */
+.frow{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;
+  padding:15px 16px;margin-bottom:12px;cursor:pointer;
+  box-shadow:8px 8px 20px var(--sh-d),-6px -6px 16px rgba(255,255,255,.9),inset 1px 1px 3px rgba(255,255,255,.9)}
+.frow:active{box-shadow:inset 6px 6px 14px rgba(138,158,198,.35)}
+.frow .fname{flex:1;font-family:var(--mono);font-size:.9rem;font-weight:600;word-break:break-all}
+.frow .fname small{display:block;color:var(--faint);font-size:.7rem;font-weight:400;
+  margin-top:3px;font-family:var(--sans);line-height:1.4}
+.fstar{width:36px;height:36px;flex:0 0 36px;border:0;border-radius:50%;background:var(--card);
+  color:#ccd2e0;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:4px 4px 10px var(--sh-d),inset 1px 1px 2px rgba(255,255,255,.9)}
+.fstar:active{box-shadow:inset 4px 4px 10px rgba(138,158,198,.4)}
+.fstar svg{width:17px;height:17px}
+.fstar.on{color:var(--accent-deep)}
+.badge{font-size:.6rem;font-weight:800;letter-spacing:1px;color:#fff;background:var(--accent);
+  border-radius:999px;padding:6px 12px;white-space:nowrap;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.14)}
+/* ---------- inputs ---------- */
+.txt{width:100%;border:0;outline:0;background:#eef3fc;color:var(--ink);
+  font-size:.95rem;font-family:inherit;border-radius:18px;padding:15px 17px;
+  box-shadow:inset 7px 7px 16px rgba(138,158,198,.4),inset -7px -7px 16px rgba(255,255,255,.9)}
+.txt::placeholder{color:var(--faint)}
+textarea.code{width:100%;min-height:46vh;border:0;outline:0;resize:vertical;
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.85rem;
+  line-height:1.65;padding:16px;white-space:pre-wrap;word-break:break-word}
+.editorbox{padding:6px}
+input[type=file]{display:none}
+.edhead{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.edhead h3{margin:0;flex:1;font-family:var(--mono);font-size:.85rem;font-weight:700;
+  word-break:break-all;letter-spacing:0;text-transform:none;color:var(--ink)}
+.mini{width:38px;height:38px;flex:0 0 38px;border:0;border-radius:50%;background:var(--card);
+  color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:4px 4px 10px var(--sh-d),inset 1px 1px 2px rgba(255,255,255,.9)}
+.mini:active{box-shadow:inset 4px 4px 10px rgba(138,158,198,.4)}
+.mini svg{width:17px;height:17px}
+.mini.danger{color:var(--accent)}
+/* ---------- key-value ---------- */
+.kv{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:10px 2px;border-bottom:1px dashed rgba(120,130,150,.3);font-size:.85rem}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--muted)}
+.kv .mono{font-family:var(--mono);font-size:.74rem;text-align:right;word-break:break-all}
+.ok{color:var(--green);font-weight:700}
+/* ---------- console ---------- */
+.console{background:#202634;color:#c9d4e8;border-radius:18px;padding:14px 16px;
+  font-family:var(--mono);font-size:.74rem;line-height:1.6;max-height:46vh;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;margin-top:4px;
+  box-shadow:inset 7px 7px 16px rgba(0,0,0,.4),inset -4px -4px 10px rgba(255,255,255,.05)}
+/* ---------- tabbar ---------- */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bg);
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  box-shadow:0 -10px 24px var(--sh-d)}
+.tabbar-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tab{border:0;background:var(--card);border-radius:18px;padding:11px 4px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--faint);
+  font-size:.66rem;font-weight:700;font-family:inherit;position:relative;
+  box-shadow:6px 6px 14px var(--sh-d),inset 1px 1px 2px rgba(255,255,255,.9)}
+.tab svg{width:21px;height:21px}
+.tab.active{background:var(--primary);color:#fff;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.35),inset 0 -5px 0 rgba(0,0,0,.16),0 8px 18px rgba(44,101,227,.4)}
+.dot{position:absolute;top:9px;right:16px;width:8px;height:8px;border-radius:50%;
+  background:var(--accent);display:none}
+.dot.show{display:block}
+.tabpage{display:none}
+.tabpage.active{display:block}
+/* ---------- misc ---------- */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grow{flex:1}
+.statusline{font-size:.8rem;color:var(--muted);margin-top:12px;font-family:var(--mono);
+  white-space:pre-wrap;word-break:break-word;line-height:1.6}
+.statusline.ok{color:var(--green)} .statusline.err{color:var(--red)}
+.hintline{font-size:.74rem;color:var(--faint);margin:10px 2px 0;line-height:1.5}
+.spinner{width:20px;height:20px;border:2.5px solid currentColor;border-top-color:transparent;
+  border-radius:50%;animation:spin .7s linear infinite;opacity:.7;flex:0 0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);
+  background:#1f2a44;color:#fff;font-size:.85rem;padding:12px 22px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:all .25s;z-index:99;white-space:nowrap;
+  box-shadow:0 8px 24px rgba(0,0,0,.3)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+    </symbol>
+    <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>
+    </symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+      <path d="M15 2v2M15 20v2M9 2v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2"/>
+    </symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+      <path d="M12 5v14M5 12h14"/>
+    </symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    </symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+    </symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>
+    </symbol>
+    <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+    </symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6 9 17l-5-5"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="logo"><svg><use href="#i-cpu"/></svg></div>
+  <div>
+    <h1>ESP32-C3 Compiler</h1>
+    <p>Web build &middot; arduino-cli</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- FILE -->
+  <section class="tabpage active" id="tab-file">
+    <div class="card">
+      <h3>File Project</h3>
+      <p class="sub">Ketuk file untuk edit &middot; bintang = file utama</p>
+      <div id="filelist"></div>
+    </div>
+    <div class="card">
+      <h3>Tambah File</h3>
+      <p class="sub">.ino .h .hpp .cpp .c &middot; maks 200 KB per file</p>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <input class="txt grow" id="newName" placeholder="nama_file.h" autocomplete="off">
+        <button class="cbtn tiny" style="align-self:center" onclick="createFile()" title="Buat file"><svg><use href="#i-plus"/></svg></button>
+      </div>
+      <label class="sbtn" for="upFile"><svg><use href="#i-upload"/></svg><span>Upload File</span></label>
+      <input type="file" id="upFile" multiple onchange="uploadFiles(this)">
+    </div>
+  </section>
+
+  <!-- EDITOR -->
+  <section class="tabpage" id="tab-editor">
+    <div class="card">
+      <div class="edhead">
+        <h3 id="edTitle">&mdash;</h3>
+        <button class="mini" onclick="renameCur()" title="Rename"><svg><use href="#i-edit"/></svg></button>
+        <button class="mini danger" onclick="deleteCur()" title="Hapus"><svg><use href="#i-trash"/></svg></button>
+        <button class="cbtn tiny" onclick="saveFile()"><svg><use href="#i-save"/></svg><span>Simpan</span></button>
+      </div>
+      <div class="inset editorbox"><textarea class="code" id="editor" spellcheck="false" autocomplete="off"></textarea></div>
+      <p class="hintline">Tersimpan otomatis sebelum compile.</p>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="tabpage" id="tab-library">
+    <div class="card">
+      <h3>Terpasang</h3>
+      <p class="sub" id="libCount"></p>
+      <div id="liblist"></div>
+      <button class="sbtn" style="margin-top:4px" onclick="loadInstalledLibs()"><svg><use href="#i-rotate"/></svg><span>Muat Ulang</span></button>
+    </div>
+    <div class="card">
+      <h3>Cari &amp; Pasang</h3>
+      <p class="sub">Dari Arduino Library Manager</p>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <input class="txt grow" id="libSearch" placeholder="mis. U8g2, PubSubClient&hellip;" autocomplete="off"
+               onkeydown="if(event.key==='Enter')searchLibs()">
+        <button class="cbtn tiny blue" style="align-self:center" onclick="searchLibs()" title="Cari"><svg><use href="#i-search"/></svg></button>
+      </div>
+      <div id="libresults"></div>
+    </div>
+    <div class="card">
+      <h3>Pasang dari ZIP</h3>
+      <p class="sub">Library custom dalam format .zip</p>
+      <label class="sbtn" for="libZip"><svg><use href="#i-upload"/></svg><span>Pilih file .zip</span></label>
+      <input type="file" id="libZip" accept=".zip" onchange="installZip(this)">
+      <div class="statusline" id="libstat">Siap.</div>
+    </div>
+  </section>
+
+  <!-- COMPILE -->
+  <section class="tabpage" id="tab-compile">
+    <div class="card">
+      <h3>Target</h3>
+      <div class="kv"><span class="k">Board</span><b id="infoBoard">&hellip;</b></div>
+      <div class="kv"><span class="k">FQBN</span><span class="mono" id="infoFqbn">&hellip;</span></div>
+      <div class="kv"><span class="k">Parallel jobs</span><b id="infoJobs">&hellip;</b></div>
+      <div class="kv"><span class="k">Core patch</span><b id="infoPatch">&hellip;</b></div>
+    </div>
+    <div class="card">
+      <h3>Aksi</h3>
+      <p class="sub">Compile memakai cache &middot; Erase &amp; Compile membangun ulang dari nol (--clean)</p>
+      <div class="row2">
+        <button class="cbtn" id="compileBtn" onclick="startCompile(false)"><svg><use href="#i-cpu"/></svg><span>Compile</span></button>
+        <button class="cbtn blue" id="cleanBtn" onclick="startCompile(true)"><svg><use href="#i-rotate"/></svg><span>Erase &amp; Compile</span></button>
+      </div>
+      <div id="binlist" style="display:none;margin-top:14px"></div>
+      <div class="statusline" id="compilestat">Siap.</div>
+    </div>
+    <div class="card">
+      <h3>Build Log</h3>
+      <div class="console" id="console">Belum ada compile.</div>
+    </div>
+  </section>
+
+</div>
+
+<nav class="tabbar"><div class="tabbar-in">
+  <button class="tab active" id="tabbtn-file" onclick="showTab('file')">
+    <svg><use href="#i-folder"/></svg>File<span class="dot" id="dot-file"></span></button>
+  <button class="tab" id="tabbtn-editor" onclick="showTab('editor')">
+    <svg><use href="#i-code"/></svg>Editor<span class="dot" id="dot-editor"></span></button>
+  <button class="tab" id="tabbtn-library" onclick="showTab('library')">
+    <svg><use href="#i-book"/></svg>Library</button>
+  <button class="tab" id="tabbtn-compile" onclick="showTab('compile')">
+    <svg><use href="#i-cpu"/></svg>Compile<span class="dot" id="dot-compile"></span></button>
+</div></nav>
+
+<div id="toast"></div>
+<script>
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+let toastT=null;
+function toast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+async function api(path,opt){
+  const r=await fetch(path,opt);
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+  return j;
+}
+function fmtSize(b){if(b==null||b===undefined)return'';return b<1024?b+' B':(b/1024).toFixed(1)+' KB';}
+/* ---------- tabs ---------- */
+let libLoaded=false;
+function showTab(name){
+  document.querySelectorAll('.tabpage').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tabbtn-'+name).classList.add('active');
+  if(name==='editor'&&curFile) focusEditor();
+  if(name==='library'&&!libLoaded){libLoaded=true;loadInstalledLibs();}
+  window.scrollTo({top:0});
+}
+function focusEditor(){
+  const ed=document.getElementById('editor');
+  if(window.innerWidth>760){ed.focus();}
+}
+/* ---------- files ---------- */
+let files=[], fileSizes={}, mainFile=null, curFile=null, dirty=false;
+async function loadFiles(){
+  const j=await api('/api/files');
+  files=(j.files||[]).map(f=>f.name);
+  fileSizes={}; (j.files||[]).forEach(f=>{fileSizes[f.name]=f.size;});
+  mainFile=j.main;
+  if(!files.includes(curFile)) curFile=files.includes(mainFile)?mainFile:(files[0]||null);
+  renderFiles();
+  if(curFile) loadFile(curFile);
+  updateInfo();
+}
+function renderFiles(){
+  const box=document.getElementById('filelist'); box.innerHTML='';
+  if(!files.length){box.innerHTML='<div class="statusline">Belum ada file. Buat atau upload.</div>';return;}
+  files.forEach(f=>{
+    const row=document.createElement('div'); row.className='frow';
+    const isMain=f===mainFile, isIno=f.endsWith('.ino');
+    row.innerHTML=`<span class="fname">${f}<small>${fmtSize(fileSizes[f])}</small></span>`
+      +(isMain?'<span class="badge">MAIN</span>':'')
+      +(isIno?`<button class="fstar${isMain?' on':''}" title="Jadikan utama"><svg><use href="#i-star"/></svg></button>`:'');
+    row.onclick=()=>openFile(f);
+    const st=row.querySelector('.fstar');
+    if(st) st.onclick=e=>{e.stopPropagation();setMain(f);};
+    box.appendChild(row);
+  });
+}
+function openFile(f){loadFile(f);showTab('editor');}
+async function setMain(f){
+  try{
+    await api('/api/file/main',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:f})});
+    mainFile=f; renderFiles(); updateInfo(); toast('Utama: '+f);
+  }catch(e){toast(e.message);}
+}
+async function createFile(){
+  const n=document.getElementById('newName').value.trim();
+  if(!n) return toast('Isi nama file dulu');
+  try{
+    await api('/api/file/new',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:n})});
+    document.getElementById('newName').value='';
+    await loadFiles(); await openFile(n);
+    toast('Dibuat: '+n);
+  }catch(e){toast(e.message);}
+}
+async function uploadFiles(inp){
+  if(!inp.files.length)return;
+  const fd=new FormData();
+  for(const f of inp.files) fd.append('files',f);
+  inp.value='';
+  try{
+    const r=await fetch('/api/upload',{method:'POST',body:fd});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+    await loadFiles();
+    toast('Upload: '+(j.saved||[]).join(', '));
+  }catch(e){toast(e.message);}
+}
+async function renameFile(f){
+  const n=prompt('Nama baru:',f);
+  if(!n||n===f)return;
+  try{
+    await api('/api/file/rename',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({old:f,new:n})});
+    await loadFiles(); toast('Rename OK');
+  }catch(e){toast(e.message);}
+}
+async function deleteFile(f){
+  if(!confirm('Hapus '+f+'?'))return;
+  try{
+    await api('/api/file?name='+encodeURIComponent(f),{method:'DELETE'});
+    if(curFile===f)curFile=null;
+    await loadFiles(); toast('Dihapus');
+  }catch(e){toast(e.message);}
+}
+function renameCur(){if(curFile)renameFile(curFile);}
+function deleteCur(){if(curFile)deleteFile(curFile);}
+/* ---------- editor ---------- */
+async function loadFile(f){
+  const j=await api('/api/file?name='+encodeURIComponent(f));
+  curFile=f; dirty=false; markDirty();
+  document.getElementById('editor').value=j.content;
+  document.getElementById('edTitle').textContent=f;
+  renderFiles();
+}
+async function saveFile(){
+  if(!curFile)return;
+  const content=document.getElementById('editor').value;
+  try{
+    await api('/api/file',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:curFile,content})});
+    dirty=false; markDirty(); toast('Tersimpan');
+  }catch(e){toast(e.message);}
+}
+function markDirty(){
+  document.getElementById('dot-editor').classList.toggle('show',dirty);
+  document.getElementById('dot-file').classList.toggle('show',dirty);
+}
+document.getElementById('editor').addEventListener('input',()=>{dirty=true;markDirty();});
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveFile();}
+});
+/* ---------- compile ---------- */
+async function updateInfo(){
+  try{
+    const i=await api('/api/info');
+    document.getElementById('infoBoard').textContent=i.board;
+    document.getElementById('infoFqbn').textContent=i.fqbn;
+    document.getElementById('infoJobs').textContent=i.jobs+' core';
+    const p=document.getElementById('infoPatch');
+    p.textContent=i.patched?'patched':'TIDAK';
+    p.className=i.patched?'ok':'';
+  }catch(e){}
+}
+function setCompiling(on){
+  const b1=document.getElementById('compileBtn'), b2=document.getElementById('cleanBtn');
+  b1.disabled=on; b2.disabled=on;
+  b1.innerHTML=on?'<span class="spinner"></span><span>Compiling&hellip;</span>'
+    :'<svg><use href="#i-cpu"/></svg><span>Compile</span>';
+  b2.innerHTML=on?'<span class="spinner"></span><span>Cleaning&hellip;</span>'
+    :'<svg><use href="#i-rotate"/></svg><span>Erase &amp; Compile</span>';
+  document.getElementById('dot-compile').classList.toggle('show',on);
+}
+async function startCompile(clean){
+  if(dirty) await saveFile();
+  if(!mainFile) return toast('Pilih file utama (.ino) di tab File');
+  setCompiling(true);
+  const bl=document.getElementById('binlist');
+  bl.style.display='none'; bl.innerHTML='';
+  const con=document.getElementById('console'); con.textContent='';
+  const stat=document.getElementById('compilestat');
+  stat.className='statusline';
+  stat.textContent=(clean?'Erase & compile':'Compile')+' berjalan… '+mainFile;
+  const t0=Date.now();
+  try{
+    const {job_id}=await api('/api/compile',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({clean:!!clean})});
+    for(let i=0;i<90;i++){
+      await sleep(3000);
+      let j;
+      try{j=await api('/api/compile/'+job_id);}catch(e){continue;}
+      con.textContent=j.log||'';
+      con.scrollTop=con.scrollHeight;
+      if(j.status==='done'){
+        const el=((Date.now()-t0)/1000).toFixed(1);
+        setCompiling(false);
+        if(j.success){
+          renderBins(j.bins);
+          stat.className='statusline ok';
+          stat.textContent=`OK ${el}s — ${(j.bins||[]).length} file .bin tersedia`;
+          toast('Compile sukses');
+        }else{
+          stat.className='statusline err';
+          stat.textContent='GAGAL: '+(j.error||'lihat log');
+          toast('Compile gagal');
+        }
+        return;
+      }
+    }
+    setCompiling(false);
+    stat.className='statusline err'; stat.textContent='Timeout.';
+  }catch(e){
+    setCompiling(false);
+    stat.className='statusline err'; stat.textContent=e.message;
+  }
+}
+function renderBins(bins){
+  const box=document.getElementById('binlist');
+  box.innerHTML='';
+  (bins||[]).forEach(b=>{
+    const row=document.createElement('div');
+    row.className='frow';
+    row.innerHTML=`<span class="fname">${b.name}<small>${(b.size/1024).toFixed(1)} KB</small></span>
+      <button class="cbtn tiny blue" title="Download"><svg><use href="#i-download"/></svg></button>`;
+    row.querySelector('button').onclick=e=>{e.stopPropagation();downloadBin(b.name);};
+    box.appendChild(row);
+  });
+  box.style.display=(bins&&bins.length)?'block':'none';
+}
+function downloadBin(n){window.location='/api/download/'+encodeURIComponent(n);}
+/* ---------- library ---------- */
+function libStat(cls,msg){
+  const s=document.getElementById('libstat');
+  s.className='statusline '+cls; s.textContent=msg;
+}
+function libRow(name,desc,btnLabel,btnCls,onClick){
+  const row=document.createElement('div'); row.className='frow';
+  row.style.cursor='default';
+  row.innerHTML=`<span class="fname">${name}<small>${desc||''}</small></span>
+    <button class="cbtn tiny ${btnCls}">${btnLabel}</button>`;
+  row.querySelector('button').onclick=onClick;
+  return row;
+}
+async function loadInstalledLibs(){
+  const box=document.getElementById('liblist');
+  box.innerHTML='<div class="statusline">Memuat…</div>';
+  try{
+    const r=await api('/api/libraries');
+    const libs=r.libraries||[];
+    document.getElementById('libCount').textContent=libs.length+' library terpasang';
+    box.innerHTML='';
+    if(!libs.length) box.innerHTML='<div class="statusline">Belum ada.</div>';
+    libs.forEach(l=>{
+      box.appendChild(libRow(l.name,
+        'v'+(l.version||'?')+(l.author?' · '+l.author:''),
+        'Hapus','pink',()=>uninstallLib(l.name)));
+    });
+  }catch(e){box.innerHTML=`<div class="statusline err">${e.message}</div>`;}
+}
+async function searchLibs(){
+  const q=document.getElementById('libSearch').value.trim();
+  if(!q)return;
+  const box=document.getElementById('libresults');
+  box.innerHTML='<div class="statusline">Mencari…</div>';
+  try{
+    const r=await api('/api/libraries/search?q='+encodeURIComponent(q));
+    const libs=r.libraries||[];
+    box.innerHTML='';
+    if(!libs.length) box.innerHTML='<div class="statusline">Tidak ketemu.</div>';
+    libs.forEach(l=>{
+      box.appendChild(libRow(l.name,
+        'v'+(l.version||'?')+(l.paragraph?' · '+l.paragraph:''),
+        'Pasang','',()=>installLib(l.name)));
+    });
+  }catch(e){box.innerHTML=`<div class="statusline err">${e.message}</div>`;}
+}
+async function installLib(name){
+  if(!confirm('Pasang library "'+name+'"?'))return;
+  const s=document.getElementById('libstat'); s.className='statusline';
+  s.innerHTML='<span class="spinner" style="display:inline-block;vertical-align:-4px"></span> Memasang '+name+'…';
+  try{
+    const {task_id}=await api('/api/libraries/install',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+    pollLibTask(task_id,loadInstalledLibs);
+  }catch(e){libStat('err',e.message);}
+}
+async function installZip(inp){
+  const f=inp.files[0]; inp.value=''; if(!f)return;
+  const s=document.getElementById('libstat'); s.className='statusline';
+  s.innerHTML='<span class="spinner" style="display:inline-block;vertical-align:-4px"></span> Mengunggah '+f.name+'…';
+  const fd=new FormData(); fd.append('zip',f);
+  try{
+    const r=await fetch('/api/libraries/install',{method:'POST',body:fd});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+    pollLibTask(j.task_id,loadInstalledLibs);
+  }catch(e){libStat('err',e.message);}
+}
+async function uninstallLib(name){
+  if(!confirm('Hapus library "'+name+'"?'))return;
+  const s=document.getElementById('libstat'); s.className='statusline';
+  s.innerHTML='<span class="spinner" style="display:inline-block;vertical-align:-4px"></span> Menghapus '+name+'…';
+  try{
+    const {task_id}=await api('/api/libraries/uninstall',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+    pollLibTask(task_id,loadInstalledLibs);
+  }catch(e){libStat('err',e.message);}
+}
+async function pollLibTask(tid,done){
+  for(let i=0;i<150;i++){
+    await sleep(2500);
+    try{
+      const t=await api('/api/libtask/'+tid);
+      if(t.status==='done'){
+        if(t.success){libStat('ok','Selesai: '+(t.label||'')); if(done)done();}
+        else libStat('err','Gagal: '+(t.error||'')+'\n'+(t.log||[]).slice(-6).join(''));
+        return;
+      }
+    }catch(e){}
+  }
+  libStat('err','Timeout.');
+}
+/* ---------- init ---------- */
+loadFiles();
+</script>
+</body>
+</html>
